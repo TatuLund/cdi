@@ -16,37 +16,28 @@
 
 package com.vaadin.cdi.itest.instantiatorcustomize;
 
-import com.vaadin.cdi.annotation.VaadinServiceEnabled;
-import com.vaadin.flow.component.HasElement;
-import com.vaadin.flow.di.Instantiator;
-import com.vaadin.flow.router.NavigationEvent;
+import jakarta.annotation.Priority;
+import jakarta.decorator.Decorator;
+import jakarta.decorator.Delegate;
+import jakarta.inject.Inject;
+import jakarta.interceptor.Interceptor;
 
-import javax.annotation.Priority;
-import javax.decorator.Decorator;
-import javax.decorator.Delegate;
-import javax.inject.Inject;
-import javax.interceptor.Interceptor;
+import com.vaadin.cdi.annotation.VaadinServiceEnabled;
+import com.vaadin.flow.di.Instantiator;
+import com.vaadin.flow.di.InstantiatorFactory;
+import com.vaadin.flow.server.VaadinService;
 
 @Priority(Interceptor.Priority.APPLICATION)
 @Decorator
-public abstract class InstantiatorDecorator implements Instantiator {
+public abstract class InstantiatorFactoryDecorator implements InstantiatorFactory {
     @Inject
     @Delegate
     @VaadinServiceEnabled
-    private Instantiator delegate;
+    private InstantiatorFactory delegate;
 
     @Override
-    public <T> T getOrCreate(Class<T> type) {
-        T instance = delegate.getOrCreate(type);
-        if (InstantiatorCustomizeView.class.equals(type)) {
-            ((InstantiatorCustomizeView) instance).customize();
-        }
-        return instance;
+    public Instantiator createInstantitor(VaadinService service) {
+        return new InstantiatorAlternative();
     }
 
-    @Override
-    public <T extends HasElement> T createRouteTarget(Class<T> routeTargetType, NavigationEvent event) {
-        // Need to override it too to make it work on both Weld and OWB.
-        return getOrCreate(routeTargetType);
-    }
 }

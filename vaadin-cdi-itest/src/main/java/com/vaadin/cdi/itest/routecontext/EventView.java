@@ -17,20 +17,22 @@
 package com.vaadin.cdi.itest.routecontext;
 
 
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.event.Event;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
+
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.cdi.annotation.RouteScopeOwner;
 import com.vaadin.cdi.annotation.RouteScoped;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.router.Route;
 
-import javax.annotation.PostConstruct;
-import javax.enterprise.event.Event;
-import javax.enterprise.event.Observes;
-import javax.inject.Inject;
-
 @Route("event")
 @RouteScoped
+@CdiComponent
 public class EventView extends Div {
 
     public static final String FIRE = "FIRE";
@@ -38,7 +40,8 @@ public class EventView extends Div {
 
     @RouteScoped
     @RouteScopeOwner(EventView.class)
-    public static class ObserverLabel extends Label {
+    @CdiComponent
+    public static class ObserverLabel extends NativeLabel {
         private void onPrintEvent(@Observes PrintEvent printEvent) {
             setText(printEvent.getMessage());
         }
@@ -58,7 +61,7 @@ public class EventView extends Div {
 
     @Inject
     @RouteScopeOwner(EventView.class)
-    private Label label;
+    private NativeLabel label;
     @Inject
     private Event<PrintEvent> printEventTrigger;
 

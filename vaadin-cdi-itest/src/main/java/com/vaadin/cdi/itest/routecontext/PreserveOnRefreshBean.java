@@ -15,15 +15,17 @@
  */
 package com.vaadin.cdi.itest.routecontext;
 
-import javax.annotation.PostConstruct;
-
 import java.util.UUID;
 
+import jakarta.annotation.PostConstruct;
+
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.cdi.annotation.RouteScopeOwner;
 import com.vaadin.cdi.annotation.RouteScoped;
 
 @RouteScoped
 @RouteScopeOwner(PreserveOnRefreshView.class)
+@CdiComponent
 public class PreserveOnRefreshBean extends AbstractCountedBean {
 
     @PostConstruct

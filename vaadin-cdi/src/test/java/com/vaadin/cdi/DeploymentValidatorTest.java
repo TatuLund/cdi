@@ -16,10 +16,6 @@
 
 package com.vaadin.cdi;
 
-import javax.enterprise.inject.Produces;
-import javax.enterprise.inject.Vetoed;
-import javax.inject.Inject;
-
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,11 +27,13 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import org.apache.deltaspike.testcontrol.api.junit.CdiTestRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import jakarta.enterprise.inject.Produces;
+import jakarta.enterprise.inject.Vetoed;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +45,8 @@ import com.vaadin.cdi.annotation.RouteScopeOwner;
 import com.vaadin.cdi.annotation.RouteScoped;
 import com.vaadin.cdi.annotation.UIScoped;
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.ErrorParameter;
 import com.vaadin.flow.router.HasErrorParameter;
@@ -55,18 +54,15 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLayout;
 
 import static com.vaadin.cdi.DeploymentValidator.DeploymentProblem.ErrorCode.NORMAL_SCOPED_COMPONENT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
-@RunWith(CdiTestRunner.class)
-public class DeploymentValidatorTest {
+public class DeploymentValidatorTest extends AbstractWeldTest {
 
     @NormalUIScoped
-    public static class NormalScopedLabel extends Label {
+    public static class NormalScopedLabel extends Span {
     }
 
     @UIScoped
-    public static class PseudoScopedLabel extends Label {
+    public static class PseudoScopedLabel extends Span {
     }
 
     @NormalUIScoped
@@ -80,20 +76,20 @@ public class DeploymentValidatorTest {
     @Route
     @RouteScoped
     @RouteScopeOwner(RouteTargetOfSelf.class)
-    public static class RouteTargetOfSelf extends Label {
+    public static class RouteTargetOfSelf extends Span {
     }
 
     @Route
     @RouteScoped
-    public static class TestRouteScopedTarget extends Label {
+    public static class TestRouteScopedTarget extends Span {
     }
 
     @RouteScoped
-    public static class TestRouterLayout extends Label implements RouterLayout {
+    public static class TestRouterLayout extends Div implements RouterLayout {
     }
 
     @RouteScoped
-    public static class TestHasErrorParameter extends Label
+    public static class TestHasErrorParameter extends Span
             implements HasErrorParameter<NullPointerException> {
         @Override
         public int setErrorParameter(BeforeEnterEvent event,
@@ -170,12 +166,12 @@ public class DeploymentValidatorTest {
 
     private List<Throwable> problems;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         problems = new ArrayList<>();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         problems.forEach(problem -> getLogger().error(problem.getMessage()));
     }
@@ -188,7 +184,7 @@ public class DeploymentValidatorTest {
 
         validator.validateForTest(infoSet, problems::add);
 
-        assertEquals(2, problems.size());
+        Assertions.assertEquals(2, problems.size());
         assertProblemExists(NORMAL_SCOPED_COMPONENT, NormalScopedLabel.class);
         assertProblemExists(NORMAL_SCOPED_COMPONENT,
                 ProducedNormalScopedComponent.class);
@@ -204,7 +200,7 @@ public class DeploymentValidatorTest {
 
         validator.validateForTest(infoSet, problems::add);
 
-        assertEquals(0, problems.size());
+        Assertions.assertEquals(0, problems.size());
     }
 
     private void assertProblemExists(ErrorCode errorCode, Type baseType) {
@@ -213,7 +209,7 @@ public class DeploymentValidatorTest {
                 .map(info -> new ProblemId((DeploymentProblem) info))
                 .anyMatch(Predicate.isEqual(expected));
         if (!match) {
-            fail("Problem does not exist: " + expected);
+            Assertions.fail("Problem does not exist: " + expected);
         }
     }
 

@@ -7,21 +7,26 @@ This is the official CDI integration for [Vaadin Flow](https://github.com/vaadin
 
 This branch is compatible with upcoming Vaadin platform versions. See other branches for other Vaadin versions:
 
-* 11.2 for Vaadin 14.2
-* 11.1 for Vaadin 14.1
-* 11.0 for Vaadin 14.0
+* 16.0 for Vaadin 25.0
+* 15.2 for Vaadin 24.8
+* 15.1 for Vaadin 24.4
+* 15.0 for Vaadin 24
+* 14.1 for Vaadin 23.3
+* 13.1 for Vaadin 22.1
+* 11.3 for Vaadin 14.10
+* 10.0 for Vaadin 10
 * 3.0 for Vaadin 8.2+
 * 2.0 for Vaadin Framework 8.0...8.1 versions
 * 1.0 for Vaadin Framework 7 versions
 
-## Using with Vaadin 10
+## Using with Vaadin
 
-To use CDI with Vaadin 10, you need to add the following dependency to your pom.xml:
+To use CDI with Vaadin, you need to add the following dependency to your pom.xml:
 ```xml
 <dependency>
   <groupdId>com.vaadin</groupId>
   <artifactId>vaadin-cdi</artifactId>
-  <version>10.0.0.beta1</version> <!-- Or the LATEST version -->
+  <version>15.2.0</version> <!-- Or the LATEST version -->
 </dependency>
 ```
 
@@ -33,7 +38,7 @@ Since the current release version is a prerelease, you need to also include the 
     <id>Vaadin prereleases</id>
     <url>https://maven.vaadin.com/vaadin-prereleases</url>
   </repository>
-<repositories>
+</repositories>
 ```
 
 ## Getting started
@@ -49,6 +54,13 @@ Execute `mvn clean install -DskipTests` in the root directory to build vaadin-cd
 ## Run integration tests
 
 Execute `mvn -pl vaadin-cdi-itest -Ptomee verify` in the root directory to run integration tests.
+
+Test can be executed against the following containers, activating the specific profile:
+
+* Wildfly Jakarta EE 10: `-Pwidfly`
+* OpenLiberty Jakarta EE 10: `-Pliberty`
+* Payara Jakarta EE 10: `-Ppayara`
+* TomEE Jakarta EE 10: `-Ptomee`
 
 ## Issue tracking
 

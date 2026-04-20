@@ -16,20 +16,22 @@
 
 package com.vaadin.cdi.itest.routecontext;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
+
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.cdi.annotation.RouteScopeOwner;
 import com.vaadin.cdi.annotation.RouteScoped;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-
 @RouteScoped
 @Route(value = "apart", layout = MasterView.class)
+@CdiComponent
 public class DetailApartView extends AbstractCountedView implements AfterNavigationObserver {
 
     public static final String MASTER = "master";
@@ -38,11 +40,11 @@ public class DetailApartView extends AbstractCountedView implements AfterNavigat
     @Inject
     @RouteScopeOwner(DetailApartView.class)
     private ApartBean apartBean;
-    private Label apartLabel;
+    private NativeLabel apartLabel;
 
     @PostConstruct
     private void init() {
-        apartLabel = new Label();
+        apartLabel = new NativeLabel();
         apartLabel.setId(BEAN_LABEL);
         apartBean.setData("APART");
         add(

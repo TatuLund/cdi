@@ -16,19 +16,21 @@
 
 package com.vaadin.cdi.itest.uicontext;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.event.Event;
+import jakarta.inject.Inject;
+
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.cdi.itest.uicontext.UIScopedLabel.SetTextEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 
-import javax.annotation.PostConstruct;
-import javax.enterprise.event.Event;
-import javax.inject.Inject;
-
 @Route("")
+@CdiComponent
 public class UIContextRootView extends Div {
 
     public static final String CLOSE_UI_BTN = "CLOSE_UI_BTN";
@@ -51,7 +53,7 @@ public class UIContextRootView extends Div {
         final String uiIdStr = UI.getCurrent().getUIId() + "";
         label.setText(uiIdStr);
 
-        final Label uiId = new Label(uiIdStr);
+        final NativeLabel uiId = new NativeLabel(uiIdStr);
         uiId.setId(UIID_LABEL);
 
         final NativeButton closeUI = new NativeButton("close UI",

@@ -16,12 +16,14 @@
 
 package com.vaadin.cdi.itest.instantiatorcustomize;
 
+import jakarta.annotation.PostConstruct;
+
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.router.Route;
 
-import javax.annotation.PostConstruct;
-
 @Route("")
+@CdiComponent
 public class InstantiatorCustomizeView extends Div {
     public static final String VIEW = "VIEW";
     public static final String CUSTOMIZED = "CUSTOMIZED";

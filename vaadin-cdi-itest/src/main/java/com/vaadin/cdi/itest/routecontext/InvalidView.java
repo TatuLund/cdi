@@ -15,13 +15,15 @@
  */
 package com.vaadin.cdi.itest.routecontext;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.cdi.annotation.RouteScopeOwner;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.router.Route;
 
 @Route("invalid-injection")
+@CdiComponent
 public class InvalidView extends Div {
 
     @Inject

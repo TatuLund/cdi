@@ -16,21 +16,23 @@
 
 package com.vaadin.cdi.itest.routecontext;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
+
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.cdi.annotation.RouteScopeOwner;
 import com.vaadin.cdi.annotation.RouteScoped;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-
 @RouteScoped
 @RouteScopeOwner(MasterView.class)
 @Route(value = "assigned", layout = MasterView.class)
+@CdiComponent
 public class DetailAssignedView extends AbstractCountedView implements AfterNavigationObserver {
 
     public static final String MASTER = "master";
@@ -39,11 +41,11 @@ public class DetailAssignedView extends AbstractCountedView implements AfterNavi
     @Inject
     @RouteScopeOwner(MasterView.class)
     private AssignedBean assignedBean;
-    private Label assignedLabel;
+    private NativeLabel assignedLabel;
 
     @PostConstruct
     private void init() {
-        assignedLabel = new Label();
+        assignedLabel = new NativeLabel();
         assignedLabel.setId(BEAN_LABEL);
         assignedBean.setData("ASSIGNED");
         add(

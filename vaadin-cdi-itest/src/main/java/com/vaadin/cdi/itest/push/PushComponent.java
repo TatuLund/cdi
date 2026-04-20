@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2018 Vaadin Ltd.
+ * Copyright 2000-2025 Vaadin Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -16,27 +16,27 @@
 
 package com.vaadin.cdi.itest.push;
 
+import java.lang.annotation.Annotation;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.RequestScoped;
+import jakarta.enterprise.context.SessionScoped;
+
 import com.vaadin.cdi.annotation.RouteScoped;
 import com.vaadin.cdi.annotation.UIScoped;
 import com.vaadin.cdi.annotation.VaadinServiceScoped;
 import com.vaadin.cdi.annotation.VaadinSessionScoped;
+import com.vaadin.cdi.util.ContextUtils;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.html.NativeButton;
-import org.apache.deltaspike.core.util.ContextUtils;
+import com.vaadin.flow.component.html.NativeLabel;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-import javax.enterprise.concurrent.ManagedThreadFactory;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.context.RequestScoped;
-import javax.enterprise.context.SessionScoped;
-import java.lang.annotation.Annotation;
-import java.util.concurrent.locks.Lock;
-
-public class PushComponent extends Div {
-
+public abstract class PushComponent extends Div {
     public static final String RUN_BACKGROUND = "RUN_BACKGROUND";
     public static final String RUN_FOREGROUND = "RUN_FOREGROUND";
 
@@ -52,20 +52,24 @@ public class PushComponent extends Div {
 
         @Override
         public void run() {
-            // We can acquire the lock after the request started this thread is processed
-            // Needed to make sure that this is sent as a push message
+            ClassLoader contextClassLoader = Thread.currentThread()
+                    .getContextClassLoader();
             Thread.currentThread().setContextClassLoader(this.classLoader);
-            Lock lockInstance = ui.getSession().getLockInstance();
-            lockInstance.lock();
-            lockInstance.unlock();
+            try {
+                // We can acquire the lock after the request started this thread
+                // is processed
+                // Needed to make sure that this is sent as a push message
+                Lock lockInstance = ui.getSession().getLockInstance();
+                lockInstance.lock();
+                lockInstance.unlock();
 
-            ui.access(PushComponent.this::print);
+                ui.access(PushComponent.this::print);
+            } finally {
+                Thread.currentThread()
+                        .setContextClassLoader(contextClassLoader);
+            }
         }
-
     }
-
-    @Resource
-    private ManagedThreadFactory threadFactory;
 
     private void print() {
         printContextIsActive(RequestScoped.class);
@@ -78,25 +82,30 @@ public class PushComponent extends Div {
     }
 
     private void printContextIsActive(Class<? extends Annotation> scope) {
-        Label label = new Label(ContextUtils.isContextActive(scope) + "");
+        NativeLabel label = new NativeLabel(
+                ContextUtils.isContextActive(scope) + "");
         label.setId(scope.getName());
-        add(new Div(new Label(scope.getSimpleName() + ": "), label));
+        add(new Div(new NativeLabel(scope.getSimpleName() + ": "), label));
     }
 
     @PostConstruct
     private void init() {
         NativeButton bgButton = new NativeButton("background", event -> {
             ContextCheckTask task = new ContextCheckTask(UI.getCurrent());
-            Thread thread = threadFactory.newThread(task);
-            thread.start();
+            // Delay execution to prevent UIDL being pushed by the thread
+            // serving
+            // the current HTTP request instead of the background thread
+            getExecutorService().schedule(task, 10, TimeUnit.MILLISECONDS);
         });
         bgButton.setId(RUN_BACKGROUND);
 
-        NativeButton fgButton = new NativeButton("foreground", event
-                -> print());
+        NativeButton fgButton = new NativeButton("foreground",
+                event -> print());
         fgButton.setId(RUN_FOREGROUND);
 
         add(bgButton, fgButton);
     }
+
+    public abstract ScheduledExecutorService getExecutorService();
 
 }

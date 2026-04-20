@@ -16,29 +16,37 @@
 
 package com.vaadin.cdi.itest;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.context.RequestScoped;
-import javax.enterprise.context.SessionScoped;
 import java.io.File;
 import java.lang.annotation.Annotation;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.RequestScoped;
+import jakarta.enterprise.context.SessionScoped;
+import net.jcip.annotations.NotThreadSafe;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.openqa.selenium.By;
 
 import com.vaadin.cdi.annotation.RouteScoped;
 import com.vaadin.cdi.annotation.UIScoped;
 import com.vaadin.cdi.annotation.VaadinServiceScoped;
 import com.vaadin.cdi.annotation.VaadinSessionScoped;
+import com.vaadin.cdi.itest.push.ManagedExecutorPushComponent;
 import com.vaadin.cdi.itest.push.PushComponent;
+import com.vaadin.cdi.itest.push.WebsocketPushView;
+import com.vaadin.cdi.itest.push.WebsocketXhrPushView;
 
+@NotThreadSafe
+@Category(NeedsCDICompliantContainer.class)
 public class PushTest extends AbstractCdiTest {
 
     @Deployment(testable = false)
     public static WebArchive deployment() {
-        return ArchiveProvider.createWebArchive("push", webArchive -> webArchive
-                .addPackage(PushComponent.class.getPackage())
+        return ArchiveProvider.createWebArchive("push-managed", webArchive -> webArchive
+                .addClasses(WebsocketPushView.class, WebsocketXhrPushView.class,
+                        PushComponent.class, ManagedExecutorPushComponent.class)
                 .addAsResource(new File("target/classes/META-INF")));
     }
 
@@ -90,7 +98,7 @@ public class PushTest extends AbstractCdiTest {
     }
 
     private void assertContextActive(Class<? extends Annotation> scope,
-                                     boolean active) {
+            boolean active) {
         assertTextEquals(active + "", scope.getName());
     }
 

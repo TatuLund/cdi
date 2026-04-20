@@ -16,12 +16,6 @@
 
 package com.vaadin.cdi.context;
 
-import javax.enterprise.context.spi.Contextual;
-import javax.enterprise.event.Observes;
-import javax.enterprise.inject.spi.Bean;
-import javax.enterprise.inject.spi.BeanManager;
-import javax.enterprise.inject.spi.PassivationCapable;
-
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.util.HashSet;
@@ -31,13 +25,18 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.apache.deltaspike.core.api.provider.BeanProvider;
-import org.apache.deltaspike.core.util.context.AbstractContext;
-import org.apache.deltaspike.core.util.context.ContextualStorage;
+import jakarta.enterprise.context.spi.Contextual;
+import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.enterprise.inject.spi.PassivationCapable;
 
 import com.vaadin.cdi.annotation.RouteScopeOwner;
 import com.vaadin.cdi.annotation.RouteScoped;
 import com.vaadin.cdi.annotation.VaadinSessionScoped;
+import com.vaadin.cdi.util.AbstractContext;
+import com.vaadin.cdi.util.BeanProvider;
+import com.vaadin.cdi.util.ContextualStorage;
 import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.page.ExtendedClientDetails;
@@ -46,7 +45,7 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.RouterLayout;
 import com.vaadin.flow.server.VaadinSession;
 
-import static javax.enterprise.event.Reception.IF_EXISTS;
+import static jakarta.enterprise.event.Reception.IF_EXISTS;
 
 /**
  * Context for {@link RouteScoped @RouteScoped} beans.
@@ -93,7 +92,7 @@ public class RouteScopedContext extends AbstractContext {
         }
 
         private void destroyDescopedBeans(UI ui,
-                Set<Class<?>> navigationChain) {
+                                          Set<Class<?>> navigationChain) {
             String uiStoreId = getUIStoreId(ui);
 
             Set<RouteStorageKey> missingKeys = getKeySet().stream()
@@ -127,19 +126,14 @@ public class RouteScopedContext extends AbstractContext {
         }
 
         private static String getWindowName(UI ui) {
-            ExtendedClientDetails details = ui.getInternals()
-                    .getExtendedClientDetails();
-            if (details == null) {
-                return null;
-            }
+            ExtendedClientDetails details = ui.getInternals().getExtendedClientDetails();
             return details.getWindowName();
         }
 
         private RouteStorageKey getKey(UI ui, Class<?> owner) {
-            ExtendedClientDetails details = ui.getInternals()
-                    .getExtendedClientDetails();
+            ExtendedClientDetails details = ui.getInternals().getExtendedClientDetails();
             RouteStorageKey key = new RouteStorageKey(owner, getUIStoreId(ui));
-            if (details == null) {
+            if (details.getWindowName() == null) {
                 ui.getPage().retrieveExtendedClientDetails(
                         det -> relocate(ui, key));
             }
@@ -153,15 +147,14 @@ public class RouteScopedContext extends AbstractContext {
 
         private List<ContextualStorage> getActiveContextualStorages() {
             return getKeySet().stream().filter(
-                    key -> key.getUIId().equals(getUIStoreId(UI.getCurrent())))
+                            key -> key.getUIId().equals(getUIStoreId(UI.getCurrent())))
                     .map(key -> getContextualStorage(key, false))
                     .collect(Collectors.toList());
         }
 
         private String getUIStoreId(UI ui) {
-            ExtendedClientDetails details = ui.getInternals()
-                    .getExtendedClientDetails();
-            if (details == null) {
+            ExtendedClientDetails details = ui.getInternals().getExtendedClientDetails();
+            if (details.getWindowName() == null) {
                 return "uid-" + ui.getUIId();
             } else {
                 return "win-" + getWindowName(ui);
@@ -211,12 +204,12 @@ public class RouteScopedContext extends AbstractContext {
 
     }
 
-    static class NavigationData {
+    static class NavigationData implements Serializable {
         private final Class<?> navigationTarget;
         private final List<Class<? extends RouterLayout>> layouts;
 
         NavigationData(Class<?> navigationTarget,
-                List<Class<? extends RouterLayout>> layouts) {
+                       List<Class<? extends RouterLayout>> layouts) {
             this.navigationTarget = navigationTarget;
             this.layouts = layouts;
         }
@@ -239,7 +232,7 @@ public class RouteScopedContext extends AbstractContext {
     }
 
     public void init(BeanManager beanManager,
-            Supplier<Boolean> isUIContextActive) {
+                     Supplier<Boolean> isUIContextActive) {
         contextManager = BeanProvider.getContextualReference(beanManager,
                 ContextualStorageManager.class, false);
         this.beanManager = beanManager;
@@ -263,22 +256,18 @@ public class RouteScopedContext extends AbstractContext {
 
     @Override
     protected ContextualStorage getContextualStorage(Contextual<?> contextual,
-            boolean createIfNotExist) {
-        RouteStorageKey key = convertToKey(contextual);
-        return contextManager.getContextualStorage(key, createIfNotExist);
-    }
-
-    private RouteStorageKey convertToKey(Contextual<?> contextual) {
+                                                     boolean createIfNotExist) {
         Bean<?> bean = getBean(contextual);
         UI ui = UI.getCurrent();
         Class<?> owner = getOwner(ui, bean);
-        if (!navigationChainHasOwner(ui, owner)) {
+        if (!navigationChainHasOwner(ui, owner) && createIfNotExist) {
             throw new IllegalStateException(String.format(
                     "Route owner '%s' instance is not available in the "
                             + "active navigation components chain: the scope defined by the bean '%s' doesn't exist.",
                     owner, bean.getBeanClass().getName()));
         }
-        return contextManager.getKey(ui, owner);
+        RouteStorageKey key = contextManager.getKey(ui, owner);
+        return contextManager.getContextualStorage(key, createIfNotExist);
     }
 
     private boolean navigationChainHasOwner(UI ui, Class<?> owner) {
@@ -309,6 +298,8 @@ public class RouteScopedContext extends AbstractContext {
                             + "so bean '%s' has no scope and may not be injected",
                     bean.getBeanClass().getName()));
         }
+        if (data.getLayouts().contains(bean.getBeanClass()))
+            return bean.getBeanClass();
         return data.getNavigationTarget();
     }
 

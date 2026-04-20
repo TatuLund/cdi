@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>com.vaadin</groupId>
         <artifactId>vaadin-cdi-parent</artifactId>
-        <version>14.0-SNAPSHOT</version>
+        <version>16.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -15,6 +15,13 @@
         <maven.deploy.skip>true</maven.deploy.skip>
         <surefire.groups></surefire.groups>
         <surefire.excludedGroups>com.vaadin.cdi.itest.SlowTests</surefire.excludedGroups>
+        <apache-tomcat.version>11.0.8</apache-tomcat.version>
+        <apache-tomee.version>10.1.0</apache-tomee.version>
+        <wildfly.version>39.0.0.Final</wildfly.version>
+        <openliberty.version>25.0.0.6</openliberty.version>
+        <openliberty.template>jakartaee10</openliberty.template>
+        <openliberty.runtimeArtifactGroupId>io.openliberty</openliberty.runtimeArtifactGroupId>
+        <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
     </properties>
 
     <pluginRepositories>
@@ -34,23 +41,23 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.enterprise</groupId>
-            <artifactId>cdi-api</artifactId>
+            <groupId>jakarta.enterprise</groupId>
+            <artifactId>jakarta.enterprise.cdi-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.enterprise.concurrent</groupId>
-            <artifactId>javax.enterprise.concurrent-api</artifactId>
+            <groupId>jakarta.enterprise.concurrent</groupId>
+            <artifactId>jakarta.enterprise.concurrent-api</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -97,6 +104,11 @@
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.lucee</groupId>
+            <artifactId>jcip-annotations</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -123,6 +135,7 @@
                 -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-help-plugin</artifactId>
+                <version>3.5.1</version>
                 <configuration>
                     <output>${project.build.directory}/effective-pom.xml</output>
                 </configuration>
@@ -140,9 +153,6 @@
     <profiles>
         <profile>
             <id>tomee</id>
-            <properties>
-                <apache-tomee.version>8.0.9</apache-tomee.version>
-            </properties>
             <dependencies>
                 <dependency>
                     <groupId>org.apache.tomee</groupId>
@@ -169,7 +179,6 @@
                             <groups>${surefire.groups}</groups>
                             <systemPropertyVariables>
                                 <tomee.host>0.0.0.0</tomee.host>
-                                <webdriver.chrome.driver>${webdriver.chrome.driver}</webdriver.chrome.driver>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
@@ -182,7 +191,7 @@
                 <dependency>
                     <groupId>org.wildfly.arquillian</groupId>
                     <artifactId>wildfly-arquillian-container-managed</artifactId>
-                    <version>3.0.1.Final</version>
+                    <version>5.0.1.Final</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
@@ -196,6 +205,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-dependency-plugin</artifactId>
+                        <version>${maven-dependency-plugin.version}</version>
                         <executions>
                             <execution>
                                 <id>unpack</id>
@@ -207,8 +217,8 @@
                                     <artifactItems>
                                         <artifactItem>
                                             <groupId>org.wildfly</groupId>
-                                            <artifactId>wildfly-dist</artifactId>
-                                            <version>11.0.0.Final</version>
+                                            <artifactId>wildfly-preview-dist</artifactId>
+                                            <version>${wildfly.version}</version>
                                             <type>zip</type>
                                             <outputDirectory>target</outputDirectory>
                                         </artifactItem>
@@ -226,8 +236,7 @@
                             <groups>${surefire.groups}</groups>
                             <systemPropertyVariables>
                                 <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-                                <jboss.home>${project.build.directory}/wildfly-11.0.0.Final</jboss.home>
-                                <webdriver.chrome.driver>${webdriver.chrome.driver}</webdriver.chrome.driver>
+                                <jboss.home>${project.build.directory}/wildfly-preview-${wildfly.version}</jboss.home>
                                 <arquillian.launch>wildfly</arquillian.launch>
                             </systemPropertyVariables>
                             <redirectTestOutputToFile>false</redirectTestOutputToFile>
@@ -242,23 +251,13 @@
                 <dependency>
                     <groupId>fish.payara.arquillian</groupId>
                     <artifactId>arquillian-payara-server-managed</artifactId>
-                    <version>2.4.5</version>
+                    <version>3.1</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-simple</artifactId>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>javax.xml.bind</groupId>
-                    <artifactId>jaxb-api</artifactId>
-                    <version>2.3.0</version>
-                </dependency>
-                <dependency>
-                    <groupId>jakarta.activation</groupId>
-                    <artifactId>jakarta.activation-api</artifactId>
-                    <version>2.0.1</version>
+                    <scope>runtime</scope>
                 </dependency>
             </dependencies>
             <build>
@@ -266,6 +265,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-dependency-plugin</artifactId>
+                        <version>${maven-dependency-plugin.version}</version>
                         <executions>
                             <execution>
                                 <id>unpack</id>
@@ -278,7 +278,7 @@
                                         <artifactItem>
                                             <groupId>fish.payara.distributions</groupId>
                                             <artifactId>payara</artifactId>
-                                            <version>5.2021.10</version>
+                                            <version>6.2025.6</version>
                                             <type>zip</type>
                                             <overWrite>false</overWrite>
                                             <outputDirectory>target</outputDirectory>
@@ -296,9 +296,9 @@
                             <excludedGroups>${surefire.excludedGroups}</excludedGroups>
                             <groups>${surefire.groups}</groups>
                             <systemPropertyVariables>
-                                <payara.home>${project.build.directory}/payara5</payara.home>
+                                <payara.home>${project.build.directory}/payara6</payara.home>
+                                <arquillian.launch>payara</arquillian.launch>
                                 <vaadin.bowerMode>true</vaadin.bowerMode>
-                                <webdriver.chrome.driver>${webdriver.chrome.driver}</webdriver.chrome.driver>
                             </systemPropertyVariables>
                             <redirectTestOutputToFile>false
                             </redirectTestOutputToFile>
@@ -308,32 +308,167 @@
             </build>
         </profile>
         <profile>
-            <id>local-run</id>
-            <activation>
-                <property>
-                    <name>!test.use.hub</name>
-                </property>
-            </activation>
+            <id>liberty</id>
+            <dependencies>
+                <dependency>
+                    <groupId>io.openliberty.arquillian</groupId>
+                    <artifactId>arquillian-liberty-managed-jakarta-junit</artifactId>
+                    <version>2.1.4</version>
+                    <type>pom</type>
+                </dependency>
+            </dependencies>
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>com.lazerycode.selenium</groupId>
-                        <artifactId>driver-binary-downloader-maven-plugin</artifactId>
-                        <version>${driver.binary.downloader.maven.plugin.version}</version>
-                        <configuration>
-                            <onlyGetDriversForHostOperatingSystem>true</onlyGetDriversForHostOperatingSystem>
-                            <rootStandaloneServerDirectory>${project.build.directory}/driver</rootStandaloneServerDirectory>
-                            <downloadedZipFileDirectory>${project.build.directory}/driver_zips</downloadedZipFileDirectory>
-                            <customRepositoryMap>${project.basedir}/drivers.xml</customRepositoryMap>
-                        </configuration>
+                        <groupId>io.openliberty.tools</groupId>
+                        <artifactId>liberty-maven-plugin</artifactId>
+                        <version>3.11.4</version>
                         <executions>
                             <execution>
-                                <phase>generate-test-resources</phase>
+                                <id>create-server</id>
+                                <phase>process-test-classes</phase>
                                 <goals>
-                                    <goal>selenium</goal>
+                                    <goal>create</goal>
+                                    <goal>install-feature</goal>
+                                    <goal>configure-arquillian</goal>
+                                </goals>
+                                <configuration>
+                                    <runtimeArtifact>
+                                        <groupId>${openliberty.runtimeArtifactGroupId}</groupId>
+                                        <artifactId>openliberty-runtime</artifactId>
+                                        <version>${openliberty.version}</version>
+                                        <type>zip</type>
+                                    </runtimeArtifact>
+                                    <useOpenLiberty>true</useOpenLiberty>
+                                    <template>${openliberty.template}</template>
+                                    <features>
+                                        <feature>jakartaee-10.0</feature>
+                                        <feature>localConnector-1.0</feature>
+                                    </features>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <!-- liberty-maven-plugin:install-feature goal installs new features but does not update
+                         server.xml file. localConnector-1.0 needs to be present in server.xml for Arquillian -->
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <phase>process-test-classes</phase>
+                                <configuration>
+                                    <target>
+                                        <copy overwrite="true" file="${project.build.testSourceDirectory}/../resources/liberty/server.xml"
+                                              tofile="${project.build.directory}/liberty/wlp/usr/servers/defaultServer/server.xml" />
+                                    </target>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
                                 </goals>
                             </execution>
                         </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${maven.surefire.plugin.version}</version>
+                        <configuration>
+                            <excludedGroups>${surefire.excludedGroups}</excludedGroups>
+                            <groups>${surefire.groups}</groups>
+                            <systemPropertyVariables>
+                                <arquillian.launch>liberty_managed</arquillian.launch>
+                            </systemPropertyVariables>
+                            <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>tomcat-weld</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.jboss.arquillian.container</groupId>
+                    <artifactId>arquillian-tomcat-managed-10</artifactId>
+                    <version>1.2.3.Final</version>
+                    <scope>test</scope>
+                </dependency>
+                <!-- Weld servlet for testing CDI injections -->
+                <dependency>
+                    <groupId>org.jboss.weld.servlet</groupId>
+                    <artifactId>weld-servlet-shaded</artifactId>
+                    <version>${weld.version}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>jakarta.enterprise.concurrent</groupId>
+                    <artifactId>jakarta.enterprise.concurrent-api</artifactId>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>${maven-dependency-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>unpack</id>
+                                <phase>process-test-classes</phase>
+                                <goals>
+                                    <goal>unpack</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <groupId>org.apache.tomcat</groupId>
+                                            <artifactId>tomcat</artifactId>
+                                            <version>${apache-tomcat.version}</version>
+                                            <type>zip</type>
+                                            <outputDirectory>target</outputDirectory>
+                                        </artifactItem>
+                                    </artifactItems>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>setup-tomcat-users</id>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <phase>process-test-classes</phase>
+                                <configuration>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.basedir}/src/test/resources/tomcat</directory>
+                                            <includes>
+                                                <include>tomcat-users.xml</include>
+                                            </includes>
+                                        </resource>
+                                    </resources>
+                                    <outputDirectory>${project.build.directory}/apache-tomcat-${apache-tomcat.version}/conf</outputDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${maven.surefire.plugin.version}</version>
+                        <configuration>
+                            <excludedGroups>com.vaadin.cdi.itest.NeedsCDICompliantContainer,${surefire.excludedGroups}</excludedGroups>
+                            <groups>${surefire.groups}</groups>
+                            <systemPropertyVariables>
+                                <arquillian.launch>tomcat-weld</arquillian.launch>
+                                <catalina.home>${project.build.directory}/apache-tomcat-${apache-tomcat.version}</catalina.home>
+                            </systemPropertyVariables>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>

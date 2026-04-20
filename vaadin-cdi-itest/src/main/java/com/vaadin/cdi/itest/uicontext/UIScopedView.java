@@ -16,17 +16,19 @@
 
 package com.vaadin.cdi.itest.uicontext;
 
+import jakarta.annotation.PostConstruct;
+
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.cdi.annotation.UIScoped;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 
-import javax.annotation.PostConstruct;
-
 @Route("uiscoped")
 @UIScoped
+@CdiComponent
 public class UIScopedView extends Div {
 
     public static final String VIEWSTATE_LABEL = "VIEWSTATE_LABEL";
@@ -36,7 +38,7 @@ public class UIScopedView extends Div {
 
     @PostConstruct
     private void init() {
-        final Label state = new Label("");
+        final NativeLabel state = new NativeLabel("");
         state.setId(VIEWSTATE_LABEL);
 
         final NativeButton button =

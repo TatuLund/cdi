@@ -16,14 +16,11 @@
 
 package com.vaadin.cdi.context;
 
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.inject.Inject;
+
 import com.vaadin.cdi.annotation.VaadinServiceScoped;
-import org.apache.deltaspike.testcontrol.api.junit.CdiTestRunner;
-import org.junit.runner.RunWith;
 
-import javax.enterprise.inject.spi.BeanManager;
-import javax.inject.Inject;
-
-@RunWith(CdiTestRunner.class)
 public class ServiceContextTest extends AbstractContextTest<ServiceContextTest.ServiceScopedTestBean> {
     @Inject
     private BeanManager beanManager;

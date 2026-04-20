@@ -16,24 +16,27 @@
 
 package com.vaadin.cdi.itest.smoke;
 
+import java.io.Serializable;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.SessionScoped;
+import jakarta.inject.Inject;
+
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.router.Route;
 
-import javax.annotation.PostConstruct;
-import javax.enterprise.context.SessionScoped;
-import javax.inject.Inject;
-import java.io.Serializable;
-
 @Route("")
+@CdiComponent
 public class CdiView extends Div {
     @Inject
     private HelloProvider helloProvider;
 
     public CdiView() {
         add(new NativeButton("Click me",
-                event -> add(new Label(getLabelText()))));
+                event -> add(new NativeLabel(getLabelText()))));
     }
 
     private String getLabelText() {

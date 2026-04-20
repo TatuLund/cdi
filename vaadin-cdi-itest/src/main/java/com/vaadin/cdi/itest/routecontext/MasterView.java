@@ -16,13 +16,14 @@
 
 package com.vaadin.cdi.itest.routecontext;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
 
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.cdi.annotation.RouteScopeOwner;
 import com.vaadin.cdi.annotation.RouteScoped;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.Route;
@@ -33,6 +34,7 @@ import com.vaadin.flow.router.RouterLink;
 @RouteScoped
 @Route("")
 @RoutePrefix("master")
+@CdiComponent
 public class MasterView extends AbstractCountedView
         implements RouterLayout, AfterNavigationObserver {
 
@@ -44,13 +46,13 @@ public class MasterView extends AbstractCountedView
     @Inject
     @RouteScopeOwner(MasterView.class)
     private AssignedBean assignedBean;
-    private Label assignedLabel;
+    private NativeLabel assignedLabel;
 
     @PostConstruct
     private void init() {
-        assignedLabel = new Label();
+        assignedLabel = new NativeLabel();
         assignedLabel.setId(ASSIGNED_BEAN_LABEL);
-        add(new Label("MASTER"), new Div(assignedLabel),
+        add(new NativeLabel("MASTER"), new Div(assignedLabel),
                 new Div(new RouterLink(ASSIGNED, DetailAssignedView.class)),
                 new Div(new RouterLink(APART, DetailApartView.class)));
     }

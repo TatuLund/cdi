@@ -15,20 +15,19 @@
  */
 package com.vaadin.cdi;
 
-import javax.enterprise.inject.spi.BeanManager;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
-import com.vaadin.flow.internal.UsageStatistics;
-import org.apache.deltaspike.core.api.provider.BeanProvider;
+import jakarta.enterprise.inject.spi.BeanManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.vaadin.cdi.util.BeanProvider;
 import com.vaadin.flow.di.DefaultInstantiator;
 import com.vaadin.flow.di.Instantiator;
 import com.vaadin.flow.i18n.I18NProvider;
-import com.vaadin.flow.server.VaadinService;
 import com.vaadin.flow.server.VaadinServiceInitListener;
+import com.vaadin.flow.server.auth.MenuAccessControl;
 
 abstract public class AbstractCdiInstantiator implements Instantiator {
 
@@ -36,19 +35,10 @@ abstract public class AbstractCdiInstantiator implements Instantiator {
     private static final String FALLING_BACK_TO_DEFAULT_INSTANTIATION = "Falling back to default instantiation.";
 
     private AtomicBoolean i18NLoggingEnabled = new AtomicBoolean(true);
-    private DefaultInstantiator delegate;
 
-    public abstract Class<? extends VaadinService> getServiceClass();
+    protected abstract DefaultInstantiator getDelegate();
 
     public abstract BeanManager getBeanManager();
-
-    @Override
-    public boolean init(VaadinService service) {
-        UsageStatistics.markAsUsed("flow/CdiInstantiator", null);
-        delegate = new DefaultInstantiator(service);
-        return delegate.init(service)
-                && getServiceClass().isAssignableFrom(service.getClass());
-    }
 
     @Override
     public <T> T getOrCreate(Class<T> type) {
@@ -63,7 +53,7 @@ abstract public class AbstractCdiInstantiator implements Instantiator {
                                         + FALLING_BACK_TO_DEFAULT_INSTANTIATION,
                                 e))
                 .lookupOrElseGet(() -> {
-                    final T instance = delegate.getOrCreate(type);
+                    final T instance = getDelegate().getOrCreate(type);
                     BeanProvider.injectFields(instance);
                     return instance;
                 });
@@ -86,7 +76,14 @@ abstract public class AbstractCdiInstantiator implements Instantiator {
             lookup.setAmbiguousHandler(e -> {
             });
         }
-        return lookup.lookupOrElseGet(delegate::getI18NProvider);
+        return lookup.lookupOrElseGet(getDelegate()::getI18NProvider);
+    }
+
+    @Override
+    public MenuAccessControl getMenuAccessControl() {
+        final BeanLookup<MenuAccessControl> lookup = new BeanLookup<>(
+                getBeanManager(), MenuAccessControl.class, BeanLookup.SERVICE);
+        return lookup.lookupOrElseGet(getDelegate()::getMenuAccessControl);
     }
 
     private static Logger getLogger() {
@@ -95,7 +92,8 @@ abstract public class AbstractCdiInstantiator implements Instantiator {
 
     @Override
     public Stream<VaadinServiceInitListener> getServiceInitListeners() {
-        return Stream.concat(delegate.getServiceInitListeners(),
-                Stream.of(getBeanManager()::fireEvent));
+        return Stream.concat(getDelegate().getServiceInitListeners(),
+                Stream.of(serviceInitEvent -> getBeanManager().getEvent()
+                        .fire(serviceInitEvent)));
     }
 }

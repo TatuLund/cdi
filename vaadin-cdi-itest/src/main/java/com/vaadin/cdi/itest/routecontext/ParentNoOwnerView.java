@@ -15,8 +15,9 @@
  */
 package com.vaadin.cdi.itest.routecontext;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
+import com.vaadin.cdi.annotation.CdiComponent;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.router.Route;
@@ -24,6 +25,7 @@ import com.vaadin.flow.router.RouterLayout;
 import com.vaadin.flow.router.RouterLink;
 
 @Route("parent-no-owner")
+@CdiComponent
 public class ParentNoOwnerView extends Div implements RouterLayout {
 
     @Inject

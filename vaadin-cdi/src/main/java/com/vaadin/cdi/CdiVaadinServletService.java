@@ -15,13 +15,29 @@
  */
 package com.vaadin.cdi;
 
+import java.io.Serializable;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Executor;
+
+import jakarta.enterprise.context.spi.Context;
+import jakarta.enterprise.context.spi.CreationalContext;
+import jakarta.enterprise.inject.AmbiguousResolutionException;
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.BeanManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.vaadin.cdi.annotation.VaadinServiceEnabled;
 import com.vaadin.cdi.annotation.VaadinServiceScoped;
 import com.vaadin.cdi.context.VaadinSessionScopedContext;
+import com.vaadin.cdi.util.BeanManagerProvider;
 import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.PollEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.di.Instantiator;
+import com.vaadin.flow.di.InstantiatorFactory;
 import com.vaadin.flow.function.DeploymentConfiguration;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationListener;
@@ -39,20 +55,7 @@ import com.vaadin.flow.server.SystemMessagesProvider;
 import com.vaadin.flow.server.VaadinService;
 import com.vaadin.flow.server.VaadinServletService;
 import com.vaadin.flow.server.VaadinSession;
-
-import javax.enterprise.context.spi.Context;
-import javax.enterprise.context.spi.CreationalContext;
-import javax.enterprise.inject.AmbiguousResolutionException;
-import javax.enterprise.inject.spi.Bean;
-import javax.enterprise.inject.spi.BeanManager;
-import java.io.Serializable;
-import java.util.Optional;
-import java.util.Set;
-
-import org.apache.deltaspike.core.api.provider.BeanManagerProvider;
-import org.apache.deltaspike.core.util.ProxyUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.vaadin.flow.server.WrappedSession;
 
 import static com.vaadin.cdi.BeanLookup.SERVICE;
 
@@ -78,15 +81,14 @@ public class CdiVaadinServletService extends VaadinServletService {
     private final CdiVaadinServiceDelegate delegate;
 
     public CdiVaadinServletService(CdiVaadinServlet servlet,
-                                   DeploymentConfiguration configuration,
-                                   BeanManager beanManager) {
+            DeploymentConfiguration configuration, BeanManager beanManager) {
         super(servlet, configuration);
-        this.delegate = new CdiVaadinServiceDelegate(this, beanManager);
+        this.delegate = new CdiVaadinServiceDelegate(beanManager);
     }
 
     @Override
     public void init() throws ServiceException {
-        delegate.init();
+        delegate.init(this);
         super.init();
     }
 
@@ -96,42 +98,67 @@ public class CdiVaadinServletService extends VaadinServletService {
         super.fireUIInitListeners(ui);
     }
 
+    @Override
+    protected VaadinSession loadSession(WrappedSession wrappedSession) {
+        return super.loadSession(wrappedSession);
+    }
+
+    @Override
+    protected void storeSession(VaadinSession session,
+            WrappedSession wrappedSession) {
+        super.storeSession(session, wrappedSession);
+    }
+
+    private void restoreDelegate(VaadinSession session) {
+
+    }
+
+    @Override
+    protected Executor createDefaultExecutor() {
+        Instance<VaadinTaskExecutorSelector> instance = delegate
+                .getBeanManager().createInstance()
+                .select(VaadinTaskExecutorSelector.class);
+        VaadinTaskExecutorSelector selector = instance.get();
+        Executor executor = selector.getExecutor()
+                .orElseGet(super::createDefaultExecutor);
+        instance.destroy(selector);
+        return executor;
+    }
+
     public Optional<Instantiator> loadInstantiators() throws ServiceException {
         BeanManager beanManager = delegate.getBeanManager();
 
-        final Set<Bean<?>> beans = beanManager.getBeans(Instantiator.class,
-                SERVICE);
+        final Set<Bean<?>> beans = beanManager
+                .getBeans(InstantiatorFactory.class, SERVICE);
         if (beans == null || beans.isEmpty()) {
             throw new ServiceException("Cannot init VaadinService "
-                    + "because no CDI instantiator bean found.");
+                    + "because no CDI instantiator factory bean found.");
         }
-        final Bean<Instantiator> bean;
+        final Bean<InstantiatorFactory> bean;
         try {
-            //noinspection unchecked
-            bean = (Bean<Instantiator>) beanManager.resolve(beans);
+            // noinspection unchecked
+            bean = (Bean<InstantiatorFactory>) beanManager.resolve(beans);
         } catch (AmbiguousResolutionException e) {
-            throw new ServiceException(
-                    "There are multiple eligible CDI "
-                            + Instantiator.class.getSimpleName() + " beans.",
-                    e);
+            throw new ServiceException("There are multiple eligible CDI "
+                    + InstantiatorFactory.class.getSimpleName() + " beans.", e);
         }
 
         // Return the contextual instance (rather than CDI proxy) as it will be
         // stored inside VaadinService. Not relying on the proxy allows
         // accessing VaadinService::getInstantiator even when
         // VaadinServiceScopedContext is not active
-        final CreationalContext<Instantiator> creationalContext = beanManager
+        final CreationalContext<InstantiatorFactory> creationalContext = beanManager
                 .createCreationalContext(bean);
         final Context context = beanManager
                 .getContext(VaadinServiceScoped.class);
-        final Instantiator instantiator = context.get(bean, creationalContext);
+        final InstantiatorFactory instantiatorFactory = context.get(bean,
+                creationalContext);
+        Instantiator instantiator = instantiatorFactory.createInstantitor(this);
 
-        if (!instantiator.init(this)) {
-            Class<?> unproxiedClass = ProxyUtils
-                    .getUnproxiedClass(instantiator.getClass());
+        if (instantiator == null) {
             throw new ServiceException("Cannot init VaadinService because "
-                    + unproxiedClass.getName() + " CDI bean init()"
-                    + " returned false.");
+                    + " no Instantiator is available. Please check your "
+                    + " InstatiatorFactory CDI bean implementation.");
         }
         return Optional.of(instantiator);
     }
@@ -146,24 +173,20 @@ public class CdiVaadinServletService extends VaadinServletService {
      */
     public static class CdiVaadinServiceDelegate implements Serializable {
 
-        private final VaadinService vaadinService;
-
         private transient BeanManager beanManager;
 
         private final UIEventListener uiEventListener;
 
-        public CdiVaadinServiceDelegate(VaadinService vaadinService,
-                BeanManager beanManager) {
+        public CdiVaadinServiceDelegate(BeanManager beanManager) {
             this.beanManager = beanManager;
-            this.vaadinService = vaadinService;
-
             uiEventListener = new UIEventListener(this);
         }
 
-        public void init() throws ServiceException {
+        public void init(VaadinService vaadinService) throws ServiceException {
             lookup(SystemMessagesProvider.class)
                     .ifPresent(vaadinService::setSystemMessagesProvider);
-            vaadinService.addUIInitListener(e -> getBeanManager().fireEvent(e));
+            vaadinService.addUIInitListener(
+                    e -> getBeanManager().getEvent().fire(e));
             vaadinService.addSessionInitListener(this::sessionInit);
             vaadinService.addSessionDestroyListener(this::sessionDestroy);
             vaadinService.addServiceDestroyListener(this::fireCdiDestroyEvent);
@@ -178,7 +201,8 @@ public class CdiVaadinServletService extends VaadinServletService {
 
         public <T> Optional<T> lookup(Class<T> type) throws ServiceException {
             try {
-                T instance = new BeanLookup<>(getBeanManager(), type, SERVICE).lookup();
+                T instance = new BeanLookup<>(getBeanManager(), type, SERVICE)
+                        .lookup();
                 return Optional.ofNullable(instance);
             } catch (AmbiguousResolutionException e) {
                 throw new ServiceException("There are multiple eligible CDI "
@@ -198,11 +222,11 @@ public class CdiVaadinServletService extends VaadinServletService {
                 throws ServiceException {
             VaadinSession session = sessionInitEvent.getSession();
             lookup(ErrorHandler.class).ifPresent(session::setErrorHandler);
-            getBeanManager().fireEvent(sessionInitEvent);
+            getBeanManager().getEvent().fire(sessionInitEvent);
         }
 
         private void sessionDestroy(SessionDestroyEvent sessionDestroyEvent) {
-            getBeanManager().fireEvent(sessionDestroyEvent);
+            getBeanManager().getEvent().fire(sessionDestroyEvent);
             if (VaadinSessionScopedContext.guessContextIsUndeployed()) {
                 // Happens on tomcat when it expires sessions upon undeploy.
                 // beanManager.getPassivationCapableBean returns null for
@@ -214,18 +238,20 @@ public class CdiVaadinServletService extends VaadinServletService {
                 return;
             }
             getLogger().debug("VaadinSessionScopedContext destroy");
-            VaadinSessionScopedContext.destroy(sessionDestroyEvent.getSession());
+            VaadinSessionScopedContext
+                    .destroy(sessionDestroyEvent.getSession());
         }
 
         private void fireCdiDestroyEvent(ServiceDestroyEvent event) {
             try {
-                getBeanManager().fireEvent(event);
+                getBeanManager().getEvent().fire(event);
             } catch (Exception e) {
                 // During application shutdown on TomEE 7,
                 // beans are lost at this point.
-                // Does not throw an exception, but catch anything just to be sure.
-                getLogger().warn("Error at destroy event distribution with CDI.",
-                        e);
+                // Does not throw an exception, but catch anything just to be
+                // sure.
+                getLogger().warn(
+                        "Error at destroy event distribution with CDI.", e);
             }
         }
 
@@ -250,22 +276,22 @@ public class CdiVaadinServletService extends VaadinServletService {
 
         @Override
         public void afterNavigation(AfterNavigationEvent event) {
-            delegate.getBeanManager().fireEvent(event);
+            delegate.getBeanManager().getEvent().fire(event);
         }
 
         @Override
         public void beforeEnter(BeforeEnterEvent event) {
-            delegate.getBeanManager().fireEvent(event);
+            delegate.getBeanManager().getEvent().fire(event);
         }
 
         @Override
         public void beforeLeave(BeforeLeaveEvent event) {
-            delegate.getBeanManager().fireEvent(event);
+            delegate.getBeanManager().getEvent().fire(event);
         }
 
         @Override
         public void onComponentEvent(PollEvent event) {
-            delegate.getBeanManager().fireEvent(event);
+            delegate.getBeanManager().getEvent().fire(event);
         }
     }
 }
